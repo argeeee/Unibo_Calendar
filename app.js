@@ -6,7 +6,7 @@ require('dotenv').config();
 const axios = require('axios');
 
 // Parsing arguments 
-const [startDate, endDate, course, year] = (function parseArgs() {
+const [startDate, endDate, course, year, exclude] = (function parseArgs() {
   const startDate = new Date(
     args.start.split("/").reverse().join('/')
   );
@@ -17,6 +17,10 @@ const [startDate, endDate, course, year] = (function parseArgs() {
 
   const course = args.course;
   const year = args.year;
+
+  const exclude = args.exclude 
+    ? args.exclude.split(',')
+    : [];
   
   const INVALID_DATE = "Invalid Date";
   
@@ -24,20 +28,24 @@ const [startDate, endDate, course, year] = (function parseArgs() {
       endDate.toString() === INVALID_DATE ||
       !course || !year)
   {
-    console.log("usage: node app --start=[valid-date] --end=[valid-date] --course=[course] --year=[year]");
+    console.log("usage: node app --start=[valid-date] --end=[valid-date] --course=[course] --year=[year] --exclude=[c1,c2,...]");
     process.exit(-1)
   }
 
-  return [startDate, endDate, course, year];
+  return [startDate, endDate, course, year, exclude];
 })();
 
-console.log('args: ', startDate.getDate(), endDate.getDate(), course, year);
+// Logging
+console.log('Args:');
+console.log('   start:', format(startDate));
+console.log('   end:', format(endDate));
+console.log('   course:', course);
+if (exclude.length !== 0) {
+  console.log('   exclude:', exclude);
+}
 
 // Init Google Calendar
 const calendar = (function createCalendar() {
-  // TODO: to remove
-  return null;
-
   const { google } = require('googleapis');
   const { OAuth2 } = google.auth;
 
@@ -53,11 +61,13 @@ const calendar = (function createCalendar() {
   return google.calendar({ version: 'v3', auth: oAuth2Client });
 })();
 
+console.log("Google Calendar initialized...");
+
 (function () {
 
-  const TWO_WEEKS = 14; // days
-  const TWO_WEEKS_STEP = 13; // days
-  const STEP_IN_MILLIS = 4000;
+  const ONE_WEEK = 7; // days
+  const ONE_WEEK_STEP = 6; // days
+  const STEP_IN_MILLIS = 10000;
 
   function plusDays(date, days) {
     const result = new Date(date);
@@ -66,11 +76,11 @@ const calendar = (function createCalendar() {
   }
 
   // to use correctly google calendar is raccomanded to 
-  // write events in blocks of 2 weeks with a pause 
+  // write events in blocks of s week with a pause 
   function processRangeOfDates(start, end, counter) {
-    const currStartDate = plusDays(start, counter * TWO_WEEKS);
+    const currStartDate = plusDays(start, counter * ONE_WEEK);
     
-    const tempEndDate = plusDays(currStartDate, TWO_WEEKS_STEP);
+    const tempEndDate = plusDays(currStartDate, ONE_WEEK_STEP);
     const currEndDate = end < tempEndDate
       ? end
       : tempEndDate;
@@ -87,7 +97,6 @@ const calendar = (function createCalendar() {
   let cnt = 0;
 
   while (true) {
-
     const [currStartDate, currEndDate, counter] = processRangeOfDates(
       startDate, 
       endDate,
@@ -120,11 +129,16 @@ function processRangeOnCalendar(currStartDate, currEndDate, partialUniboApiUrlFo
     .then(function (response) {
       const { data } = response;
       data.forEach(dataRow => {
-        const [summary, location, description, start, end] = buildEventFromGivenData(dataRow);
-        console.log("processing data...");
+        // TODO: to refactor
+        // Filter
+        if (exclude.includes(dataRow.cod_modulo.toString())) {
+          console.log("Excluding: ", dataRow.cod_modulo.toString());
+          return;
+        }
         
-        // TODO:
-        // createEvent(summary, location, description, start, end);
+        const [summary, location, description, start, end] = buildEventFromGivenData(dataRow);
+        console.log("Creating event...", summary);
+        createEvent(summary, location, description, start, end);
       
       });
     })
@@ -208,8 +222,14 @@ function createEvent(summary, location, description, start, end) {
 
   return calendar.events.insert(
     { calendarId: 'primary', resource: event },
-    err => {
-      if (err) return console.error('Error Creating Calender Event: ', err)
+    (err) => {
+      if (err) {
+        // TODO: to manage error logs and better retry method
+        console.error('Error Creating Calender Event: ', "err");
+        console.log('Retry in 5 seconds...');
+        setTimeout(() => createEvent(summary, location, description, start, end), 5000);
+        return;
+      }
       return console.log('Calendar event successfully created: ' + summary)
     }
   );

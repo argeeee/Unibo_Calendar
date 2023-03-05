@@ -3,11 +3,11 @@
 ## How to create the .env file
 
 You need to set:
-- CLIEND_ID
-- CLIEND_SECRET
+- CLIENT_ID
+- CLIENT_SECRET
 - REFRESH_TOKEN
 
-Using google console you can retrieve CLIEND_ID and CLIEND_SECRET:
+Using google console you can retrieve CLIENT_ID and CLIENT_SECRET:
 - Create a project at https://console.cloud.google.com/
 - Select the project
 - Enable "Google Calendar API"
@@ -29,6 +29,12 @@ Now you have all you need
 
 ## How to run
 
+First you need to install node_modules:
+```bash
+npm i
+```
+
+Than you can run the command:
 ```bash
 node app --start=[valid-date] --end=[valid-date] --course=[course] --year=[year] --exclude=[c1,c2,...]
 ```

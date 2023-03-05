@@ -1,0 +1,23 @@
+{
+  "name": "google-calendar-unibo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/argeeee/Unibo_Calendar.git"
+  },
+  "bugs": {
+    "url": "https://github.com/argeeee/Unibo_Calendar/issues"
+  },
+  "homepage": "https://github.com/argeeee/Unibo_Calendar#readme",
+  "dependencies": {
+    "minimist": "^1.2.8"
+  }
+}
